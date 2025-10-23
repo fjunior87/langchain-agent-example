@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Docker Build Script for Harness Pipeline Agent
-# This script helps build the Docker image with the Harness MCP server bundled
+# Builds Docker image with automatic MCP server inclusion from official Harness image
 
 set -e
 
@@ -13,49 +13,44 @@ echo "=========================================="
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Check if .env file exists
-if [ ! -f .env ]; then
-    echo -e "${RED}Error: .env file not found!${NC}"
-    echo "Please copy .env.example to .env and configure your settings."
-    exit 1
-fi
-
-# Create mcp_server directory if it doesn't exist
-mkdir -p mcp_server
-
-# Check if MCP server binary exists
-if [ ! -f mcp_server/harness-mcp ]; then
-    echo -e "${YELLOW}Warning: Harness MCP server binary not found in mcp_server/harness-mcp${NC}"
-    echo ""
-    echo "Please do ONE of the following:"
-    echo "1. Download the Harness MCP server binary and place it in mcp_server/harness-mcp"
-    echo "2. If using npm package, the Dockerfile will handle installation"
-    echo "3. Copy the binary from your local installation:"
-    echo "   cp /path/to/harness-mcp mcp_server/harness-mcp"
-    echo ""
-    read -p "Do you want to continue building anyway? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
-else
-    echo -e "${GREEN}✓ Found MCP server binary${NC}"
-    chmod +x mcp_server/harness-mcp
-fi
+echo ""
+echo -e "${BLUE}ℹ️  This build uses multi-stage Docker build${NC}"
+echo "   - MCP server is automatically pulled from harness/mcp-server image"
+echo "   - No manual MCP server download required"
+echo "   - .env file is generated at runtime from environment variables"
+echo ""
 
 # Build arguments
 IMAGE_NAME=${1:-harness-pipeline-agent}
 IMAGE_TAG=${2:-latest}
+MCP_VERSION=${MCP_SERVER_VERSION:-latest}
 FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
 
-echo ""
-echo "Building Docker image: ${FULL_IMAGE_NAME}"
+echo "Build Configuration:"
+echo "  Image Name: ${FULL_IMAGE_NAME}"
+echo "  MCP Server Version: ${MCP_VERSION}"
 echo ""
 
-# Build the Docker image
-docker build -t "${FULL_IMAGE_NAME}" .
+# Optional: Check if .env exists for docker-compose usage
+if [ -f .env ]; then
+    echo -e "${GREEN}✓ Found .env file (will be used by docker-compose)${NC}"
+else
+    echo -e "${YELLOW}ℹ️  No .env file found (not required for build)${NC}"
+    echo "   You can create one for docker-compose or pass env vars at runtime"
+fi
+
+echo ""
+echo "Building Docker image..."
+echo ""
+
+# Build the Docker image with MCP server version argument
+docker build \
+    --build-arg MCP_SERVER_VERSION="${MCP_VERSION}" \
+    -t "${FULL_IMAGE_NAME}" \
+    .
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -65,14 +60,27 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "Image: ${FULL_IMAGE_NAME}"
     echo ""
-    echo "To run the container:"
-    echo "  docker run -p 8000:8000 --env-file .env ${FULL_IMAGE_NAME}"
+    echo "To run the container, pass environment variables directly:"
     echo ""
-    echo "Or use docker-compose:"
+    echo -e "${BLUE}Option 1: Using docker run with environment variables${NC}"
+    echo "  docker run -d -p 8000:8000 \\"
+    echo "    -e OPENAI_API_KEY=your_key \\"
+    echo "    -e HARNESS_ACCOUNT_ID=your_account \\"
+    echo "    -e HARNESS_API_KEY=your_key \\"
+    echo "    -e HARNESS_DEFAULT_ORG_ID=your_org \\"
+    echo "    -e HARNESS_DEFAULT_PROJECT_ID=your_project \\"
+    echo "    ${FULL_IMAGE_NAME}"
+    echo ""
+    echo -e "${BLUE}Option 2: Using docker run with .env file${NC}"
+    echo "  docker run -d -p 8000:8000 --env-file .env ${FULL_IMAGE_NAME}"
+    echo ""
+    echo -e "${BLUE}Option 3: Using docker-compose (recommended)${NC}"
     echo "  docker-compose up -d"
     echo ""
     echo "To view logs:"
     echo "  docker logs -f harness-pipeline-agent"
+    echo ""
+    echo -e "${YELLOW}Note:${NC} The container automatically generates .env from environment variables"
     echo ""
 else
     echo -e "${RED}Docker build failed!${NC}"

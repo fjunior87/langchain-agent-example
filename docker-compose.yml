@@ -5,17 +5,33 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        MCP_SERVER_VERSION: ${MCP_SERVER_VERSION:-latest}
     container_name: harness-pipeline-agent
     ports:
       - "8000:8000"
     environment:
+      # OpenAI Configuration
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # Harness.io Configuration
       - HARNESS_ACCOUNT_ID=${HARNESS_ACCOUNT_ID}
       - HARNESS_API_KEY=${HARNESS_API_KEY}
       - HARNESS_API_URL=${HARNESS_API_URL:-https://app.harness.io}
+      - HARNESS_DEFAULT_ORG_ID=${HARNESS_DEFAULT_ORG_ID:-default}
+      - HARNESS_DEFAULT_PROJECT_ID=${HARNESS_DEFAULT_PROJECT_ID:-default}
+      
+      # MCP Server Configuration
       - MCP_SERVER_PATH=/app/mcp_server/harness-mcp
+      
+      # API Server Configuration
       - API_HOST=0.0.0.0
       - API_PORT=8000
+      
+      # LangSmith Tracing (Optional)
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-harness-agent}
     env_file:
       - .env
     volumes:

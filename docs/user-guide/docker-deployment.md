@@ -2,6 +2,23 @@
 
 This guide explains how to build and run the Harness Pipeline Agent using Docker.
 
+## 🎉 New: Automatic Environment Configuration
+
+The Docker image now automatically generates the `.env` file from environment variables! No need to mount or manually create configuration files.
+
+**Quick Start:**
+```bash
+docker run -d -p 8000:8000 \
+  -e OPENAI_API_KEY=your-key \
+  -e HARNESS_ACCOUNT_ID=your-id \
+  -e HARNESS_API_KEY=your-key \
+  -e HARNESS_DEFAULT_ORG_ID=default \
+  -e HARNESS_DEFAULT_PROJECT_ID=default \
+  harness-agent
+```
+
+See [Docker Environment Variables Guide](../../DOCKER_ENV_GUIDE.md) for complete documentation.
+
 ## Prerequisites
 
 - Docker 20.10 or higher
