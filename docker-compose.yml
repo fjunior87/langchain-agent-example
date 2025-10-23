@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  harness-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: harness-pipeline-agent
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HARNESS_ACCOUNT_ID=${HARNESS_ACCOUNT_ID}
+      - HARNESS_API_KEY=${HARNESS_API_KEY}
+      - HARNESS_API_URL=${HARNESS_API_URL:-https://app.harness.io}
+      - MCP_SERVER_PATH=/app/mcp_server/harness-mcp
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    env_file:
+      - .env
+    volumes:
+      # Optional: Mount logs directory
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - harness-network
+
+networks:
+  harness-network:
+    driver: bridge
